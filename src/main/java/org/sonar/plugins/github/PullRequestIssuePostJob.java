@@ -23,6 +23,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.StreamSupport;
+import javax.annotation.Nullable;
 import org.apache.commons.lang.StringUtils;
 import org.kohsuke.github.GHCommitState;
 import org.sonar.api.batch.fs.InputComponent;
@@ -61,9 +62,10 @@ public class PullRequestIssuePostJob implements PostJob {
 
   @Override
   public void execute(PostJobContext context) {
-    GlobalReport report = new GlobalReport(markDownUtils, gitHubPluginConfiguration.tryReportIssuesInline());
+    String projectKeyAdjusted = gitHubPluginConfiguration.projectKeyAdjusted();
+    GlobalReport report = new GlobalReport(markDownUtils, gitHubPluginConfiguration.tryReportIssuesInline(), projectKeyAdjusted);
     try {
-      Map<InputFile, Map<Integer, StringBuilder>> commentsToBeAddedByLine = processIssues(report, context.issues());
+      Map<InputFile, Map<Integer, StringBuilder>> commentsToBeAddedByLine = processIssues(report, context.issues(), projectKeyAdjusted);
 
       updateReviewComments(commentsToBeAddedByLine);
 
@@ -78,7 +80,7 @@ public class PullRequestIssuePostJob implements PostJob {
     }
   }
 
-  private Map<InputFile, Map<Integer, StringBuilder>> processIssues(GlobalReport report, Iterable<PostJobIssue> issues) {
+  private Map<InputFile, Map<Integer, StringBuilder>> processIssues(GlobalReport report, Iterable<PostJobIssue> issues, @Nullable String projectKeyAdjusted) {
     Map<InputFile, Map<Integer, StringBuilder>> commentToBeAddedByFileAndByLine = new HashMap<>();
 
     StreamSupport.stream(issues.spliterator(), false)
@@ -91,21 +93,21 @@ public class PullRequestIssuePostJob implements PostJob {
           pullRequestFacade.hasFile((InputFile) inputComponent);
       })
       .sorted(ISSUE_COMPARATOR)
-      .forEach(i -> processIssue(report, commentToBeAddedByFileAndByLine, i));
+      .forEach(i -> processIssue(report, commentToBeAddedByFileAndByLine, i, projectKeyAdjusted));
     return commentToBeAddedByFileAndByLine;
 
   }
 
-  private void processIssue(GlobalReport report, Map<InputFile, Map<Integer, StringBuilder>> commentToBeAddedByFileAndByLine, PostJobIssue issue) {
+  private void processIssue(GlobalReport report, Map<InputFile, Map<Integer, StringBuilder>> commentToBeAddedByFileAndByLine, PostJobIssue issue, @Nullable String projectKeyAdjusted) {
     boolean reportedInline = false;
     InputComponent inputComponent = issue.inputComponent();
     if (gitHubPluginConfiguration.tryReportIssuesInline() && inputComponent != null && inputComponent.isFile()) {
-      reportedInline = tryReportInline(commentToBeAddedByFileAndByLine, issue, (InputFile) inputComponent);
+      reportedInline = tryReportInline(commentToBeAddedByFileAndByLine, issue, (InputFile) inputComponent, projectKeyAdjusted);
     }
     report.process(issue, pullRequestFacade.getGithubUrl(inputComponent, issue.line()), reportedInline);
   }
 
-  private boolean tryReportInline(Map<InputFile, Map<Integer, StringBuilder>> commentToBeAddedByFileAndByLine, PostJobIssue issue, InputFile inputFile) {
+  private boolean tryReportInline(Map<InputFile, Map<Integer, StringBuilder>> commentToBeAddedByFileAndByLine, PostJobIssue issue, InputFile inputFile, @Nullable String projectKeyAdjusted) {
     Integer lineOrNull = issue.line();
     if (lineOrNull != null) {
       int line = lineOrNull.intValue();
@@ -120,6 +122,10 @@ public class PullRequestIssuePostJob implements PostJob {
           commentsByLine.put(line, new StringBuilder());
         }
         commentsByLine.get(line).append(markDownUtils.inlineIssue(issue.severity(), message, ruleKey)).append("\n");
+        if (!StringUtils.isEmpty(projectKeyAdjusted)) {
+          commentsByLine.get(line).append(MarkDownUtils.projectId(projectKeyAdjusted)).append("\n");
+        }
+
         return true;
       }
     }
