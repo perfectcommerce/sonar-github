@@ -136,13 +136,13 @@ public class PullRequestFacade {
    * Load all previous comments made by provided github account.
    */
   private void loadExistingReviewComments() throws IOException {
-    String projectKeyAdjusted = config.projectKeyAdjusted();
+    String projectKey = config.projectKey();
     for (GHPullRequestReviewComment comment : pr.listReviewComments()) {
       if (!myself.equals(comment.getUser().getLogin())) {
         // Ignore comments from other users
         continue;
       }
-      if (!StringUtils.isEmpty(projectKeyAdjusted) && !comment.getBody().contains(MarkDownUtils.projectId(projectKeyAdjusted))) {
+      if (!StringUtils.isEmpty(projectKey) && !comment.getBody().contains(MarkDownUtils.projectId(projectKey))) {
         // Ignore comments that don't contain current projectId
         continue;
       }
@@ -263,10 +263,10 @@ public class PullRequestFacade {
 
   private boolean findAndDeleteOthers(@Nullable String markup) throws IOException {
     boolean found = false;
-    String projectKeyAdjusted = config.projectKeyAdjusted();
+    String projectKey = config.projectKey();
     for (GHIssueComment comment : pr.listComments()) {
       if (myself.equals(comment.getUser().getLogin())) {
-        if (!StringUtils.isEmpty(projectKeyAdjusted) && !comment.getBody().contains(MarkDownUtils.projectId(projectKeyAdjusted))) {
+        if (!StringUtils.isEmpty(projectKey) && !comment.getBody().contains(MarkDownUtils.projectId(projectKey))) {
           // Ignore comments that don't contain current projectId
           continue;
         }

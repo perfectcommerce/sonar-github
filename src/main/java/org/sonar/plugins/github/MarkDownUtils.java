@@ -50,7 +50,7 @@ public class MarkDownUtils {
 
   public static String projectId(String projectId) {
     StringBuilder sb = new StringBuilder();
-    sb.append("\n[project-id]: ").append(projectId);
+    sb.append("\n[project-id]: [").append(projectId).append("]");
     return sb.toString();
   }
 

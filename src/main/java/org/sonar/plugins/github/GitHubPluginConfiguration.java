@@ -142,15 +142,6 @@ public class GitHubPluginConfiguration {
     return settings.getString("sonar.projectKey");
   }
 
-  public @Nullable String projectKeyAdjusted() {
-    String projectKeyAdjusted = projectKey();
-    if (!isEmpty(projectKeyAdjusted)) {
-      projectKeyAdjusted += "2f01f2e2b90091036948d9134be8f59c";
-    }
-    
-    return projectKeyAdjusted;
-  }
-
   /**
    * Checks if a proxy was passed with command line parameters or configured in the system.
    * If only an HTTP proxy was configured then it's properties are copied to the HTTPS proxy (like SonarQube configuration)
