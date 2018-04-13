@@ -35,6 +35,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nullable;
+import org.apache.commons.lang.StringUtils;
 import org.kohsuke.github.GHCommitState;
 import org.kohsuke.github.GHCommitStatus;
 import org.kohsuke.github.GHIssueComment;
@@ -135,9 +136,14 @@ public class PullRequestFacade {
    * Load all previous comments made by provided github account.
    */
   private void loadExistingReviewComments() throws IOException {
+    String projectKey = config.projectKey();
     for (GHPullRequestReviewComment comment : pr.listReviewComments()) {
       if (!myself.equals(comment.getUser().getLogin())) {
         // Ignore comments from other users
+        continue;
+      }
+      if (!StringUtils.isEmpty(projectKey) && !comment.getBody().contains(MarkDownUtils.projectId(projectKey))) {
+        // Ignore comments that don't contain current projectId
         continue;
       }
       if (!existingReviewCommentsByLocationByFile.containsKey(comment.getPath())) {
@@ -257,8 +263,13 @@ public class PullRequestFacade {
 
   private boolean findAndDeleteOthers(@Nullable String markup) throws IOException {
     boolean found = false;
+    String projectKey = config.projectKey();
     for (GHIssueComment comment : pr.listComments()) {
       if (myself.equals(comment.getUser().getLogin())) {
+        if (!StringUtils.isEmpty(projectKey) && !comment.getBody().contains(MarkDownUtils.projectId(projectKey))) {
+          // Ignore comments that don't contain current projectId
+          continue;
+        }
         if (markup == null || found || !markup.equals(comment.getBody())) {
           comment.delete();
           continue;
@@ -274,12 +285,20 @@ public class PullRequestFacade {
   public void createOrUpdateSonarQubeStatus(GHCommitState status, String statusDescription) {
     try {
       // Copy previous targetUrl in case it was set by an external system (like the CI job).
+      String projectKey = config.projectKey();
+      String commitContext = null;
+      if (!StringUtils.isEmpty(projectKey)) {
+        commitContext = COMMIT_CONTEXT + " " + projectKey;
+      } else {
+        commitContext = COMMIT_CONTEXT;
+      }
+       
       String targetUrl = null;
-      GHCommitStatus lastStatus = getCommitStatusForContext(pr, COMMIT_CONTEXT);
+      GHCommitStatus lastStatus = getCommitStatusForContext(pr, commitContext);
       if (lastStatus != null) {
         targetUrl = lastStatus.getTargetUrl();
       }
-      ghRepo.createCommitStatus(pr.getHead().getSha(), status, targetUrl, statusDescription, COMMIT_CONTEXT);
+      ghRepo.createCommitStatus(pr.getHead().getSha(), status, targetUrl, statusDescription, commitContext);
     } catch (FileNotFoundException e) {
       String msg = "Unable to set pull request status. GitHub account probably miss push permission on the repository.";
       if (LOG.isDebugEnabled()) {

@@ -31,15 +31,17 @@ public class GlobalReport {
   private int[] newIssuesBySeverity = new int[Severity.values().length];
   private int extraIssueCount = 0;
   private int maxGlobalReportedIssues;
+  private String projectKey;
   private final ReportBuilder builder;
 
-  public GlobalReport(MarkDownUtils markDownUtils, boolean tryReportIssuesInline) {
-    this(markDownUtils, tryReportIssuesInline, GitHubPluginConfiguration.MAX_GLOBAL_ISSUES);
+  public GlobalReport(MarkDownUtils markDownUtils, boolean tryReportIssuesInline, @Nullable String projectKey) {
+    this(markDownUtils, tryReportIssuesInline, GitHubPluginConfiguration.MAX_GLOBAL_ISSUES, projectKey);
   }
 
-  public GlobalReport(MarkDownUtils markDownUtils, boolean tryReportIssuesInline, int maxGlobalReportedIssues) {
+  public GlobalReport(MarkDownUtils markDownUtils, boolean tryReportIssuesInline, int maxGlobalReportedIssues, @Nullable String projectKey) {
     this.tryReportIssuesInline = tryReportIssuesInline;
     this.maxGlobalReportedIssues = maxGlobalReportedIssues;
+    this.projectKey = projectKey;
     this.builder = new MarkDownReportBuilder(markDownUtils);
   }
 
@@ -50,7 +52,8 @@ public class GlobalReport {
   public String formatForMarkdown() {
     int newIssues = newIssues(Severity.BLOCKER) + newIssues(Severity.CRITICAL) + newIssues(Severity.MAJOR) + newIssues(Severity.MINOR) + newIssues(Severity.INFO);
     if (newIssues == 0) {
-      return "SonarQube analysis reported no issues.";
+      builder.append("SonarQube analysis reported no issues.").appendProjectId(projectKey);
+      return builder.toString();
     }
 
     boolean hasInlineIssues = newIssues > extraIssueCount;
@@ -67,7 +70,7 @@ public class GlobalReport {
       appendExtraIssues(builder, hasInlineIssues, extraIssuesTruncated);
     }
 
-    return builder.toString();
+    return builder.appendProjectId(projectKey).toString();
   }
 
   private void appendExtraIssues(ReportBuilder builder, boolean hasInlineIssues, boolean extraIssuesTruncated) {

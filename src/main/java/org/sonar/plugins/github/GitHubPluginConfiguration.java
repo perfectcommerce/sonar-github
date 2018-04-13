@@ -28,6 +28,7 @@ import java.net.URISyntaxException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.annotation.CheckForNull;
+import javax.annotation.Nullable;
 import org.sonar.api.CoreProperties;
 import org.sonar.api.batch.BatchSide;
 import org.sonar.api.batch.InstantiationStrategy;
@@ -38,6 +39,7 @@ import org.sonar.api.utils.log.Logger;
 import org.sonar.api.utils.log.Loggers;
 
 import static org.apache.commons.lang.StringUtils.isNotBlank;
+import static org.apache.commons.lang.StringUtils.isEmpty;
 
 @BatchSide
 @InstantiationStrategy(InstantiationStrategy.PER_BATCH)
@@ -134,6 +136,10 @@ public class GitHubPluginConfiguration {
 
   public boolean tryReportIssuesInline() {
     return !settings.getBoolean(GitHubPlugin.GITHUB_DISABLE_INLINE_COMMENTS);
+  }
+
+  public @Nullable String projectKey() {
+    return settings.getString("sonar.projectKey");
   }
 
   /**
